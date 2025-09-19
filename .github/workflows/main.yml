@@ -15,7 +15,7 @@ env:
   PUBLISH_BRANCH: gh-pages
   BUILD_DIR: dist
   # Change this to your repo name if it's different
-  REPO_BASE: "/eventpass-ktca/"
+  REPO_BASE: "/dashboard-ktca/"
 
 jobs:
   build-and-deploy:
