@@ -91,7 +91,7 @@ export default function Home() {
         <h2 style={{ marginTop: 0 }}>Attendee form</h2>
 
         <label style={{ display: "block", marginTop: 12 }}>
-          Name
+          First Name
           <input
             name="name"
             value={form.name}
