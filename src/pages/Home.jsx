@@ -102,7 +102,7 @@ export default function Home() {
         </label>
 
         <label style={{ display: "block", marginTop: 12 }}>
-          Mobile
+          Mobile number
           <input
             name="mobile"
             type="tel"
