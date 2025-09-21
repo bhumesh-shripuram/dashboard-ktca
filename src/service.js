@@ -34,6 +34,13 @@ export async function getById(id, { signal } = {}) {
   return Array.isArray(data) && data.length ? data[0] : null;
 }
 
+export async function getAll({ signal } = {}) {
+  const url = `${ENDPOINT}?select=*`;
+  const res = await fetch(url, { headers: buildHeaders(), signal });
+  const data = await parseResponse(res);
+  return Array.isArray(data) ? data : [];
+}
+
 /**
  * Get attendee(s) by phone number
  */
