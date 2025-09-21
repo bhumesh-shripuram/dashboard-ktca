@@ -71,7 +71,8 @@ export default function Home({ attendees: initialAttendees, fetchUrl, height = 3
       registeredChildren: 0,
       actualChildren: 0,
       noOfPresent: 0,
-      noOfAbsent:0
+      noOfAbsent:0,
+      adhoc:0
     };
 
     for (const r of rows) {
@@ -81,6 +82,7 @@ export default function Home({ attendees: initialAttendees, fetchUrl, height = 3
       const actC = r.no_of_actual_children ?? r.noOfActualChildren ?? r.actualChildren ?? 0;
       const pre = r.present ? 1:0;
       const abs = !r.present ? 1:0;
+      const ad = r.adhoc ? 1:0;
 
       acc.registeredAdults += Number(regA) || 0;
       acc.actualAdults += Number(actA) || 0;
@@ -88,6 +90,7 @@ export default function Home({ attendees: initialAttendees, fetchUrl, height = 3
       acc.actualChildren += Number(actC) || 0;
       acc.noOfPresent += Number(pre) || 0;
       acc.noOfAbsent += Number(abs) || 0;
+      acc.adhoc += Number(ad) || 0;
     }
 
     return acc;
@@ -149,6 +152,9 @@ export default function Home({ attendees: initialAttendees, fetchUrl, height = 3
           <div className="mt-3 text-sm text-gray-600 dark:text-gray-300">
             Total — Registered: {totals.registeredAdults + totals.registeredChildren} • Actual:{" "}
             {totals.actualAdults + totals.actualChildren}
+          </div>
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+            Adhoc: {totals.adhoc}
           </div>
         </>
       )}
