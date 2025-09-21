@@ -1,179 +1,157 @@
-import React, { useState } from "react";
-import { insert } from "../service";
+import React, { useEffect, useMemo, useState } from "react";
+import { getAll } from "../service"; // adjust path if needed
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+  LabelList,
+} from "recharts";
 
-export default function Home() {
-  const [form, setForm] = useState({
-    name: "",
-    mobile: "",
-    email: "",
-    noOfAdults: 0,
-    noOfChildren: 0,
-    preparing: false,
-    firstTime: false,
-  });
+export default function Home({ attendees: initialAttendees, fetchUrl, height = 300 }) {
+  const [rows, setRows] = useState(initialAttendees ?? []);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  // Fetch attendees if parent didn't provide them
+  useEffect(() => {
+    let cancelled = false;
 
-  const handleChange = (e) => {
-    const { name, type, value, checked } = e.target;
-    setForm((f) => ({
-      ...f,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : type === "number"
-          ? value === "" ? "" : Number(value)
-          : value,
-    }));
-  };
-
-  const validate = () => {
-    if (!form.name.trim()) return "Name is required.";
-    if (!/^[+\d]?\d{9,14}$/.test(String(form.mobile).replace(/\s+/g, "")))
-      return "Enter a valid mobile number (10–15 digits).";
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      return "Enter a valid email or leave blank.";
-    if (form.noOfAdults === "" || form.noOfAdults < 0) return "Adults must be 0 or more.";
-    if (form.noOfChildren === "" || form.noOfChildren < 0) return "Children must be 0 or more.";
-    return "";
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    const v = validate();
-    if (v) {
-      setError(v);
+    if (initialAttendees && initialAttendees.length) {
+      setRows(initialAttendees);
       return;
     }
 
-    setSubmitting(true);
-    try {
-      // Replace this with your API call:
-      const payload = {
-        name: form.name.trim(),
-        mobile: String(form.mobile).replace(/\s+/g, ""),
-        email: form.email.trim() || null,
-        no_of_actual_adults: Number(form.noOfAdults) || 0,
-        no_of_actual_children: Number(form.noOfChildren) || 0,
-        preparing: !!form.preparing,
-        first_time: !!form.firstTime,
-      };
-      console.log("Submit payload:", payload);
-
-      const result = await insert(payload);
-      console.log(result);
-      // lightweight UX:
-      //alert("Submitted — check console for payload (or swap in your API).");
-      alert("The user info is updated to the system. Thank you!!")
-      // reset form if you like:
-      setForm({
-        name: "",
-        mobile: "",
-        email: "",
-        noOfAdults: 0,
-        noOfChildren: 0,
-        preparing: false,
-        firstTime: false,
-      });
-    } catch (err) {
-      console.error(err);
-      setError("Submission failed: " + (err?.message || "unknown"));
-    } finally {
-      setSubmitting(false);
+    async function loadAll() {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getAll();
+        if (!cancelled) setRows(Array.isArray(data) ? data : []);
+      } catch (err) {
+        if (!cancelled) setError(err?.message ?? String(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
-  };
+
+    // legacy: if fetchUrl is provided, prefer it
+    if (!initialAttendees && fetchUrl) {
+      (async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const res = await fetch(fetchUrl, { headers: { Accept: "application/json" } });
+          if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+          const json = await res.json();
+          if (!cancelled) setRows(Array.isArray(json) ? json : json.data || []);
+        } catch (err) {
+          if (!cancelled) setError(err?.message ?? String(err));
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      })();
+    } else if (!initialAttendees) {
+      loadAll();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialAttendees, fetchUrl]);
+
+  const totals = useMemo(() => {
+    const acc = {
+      registeredAdults: 0,
+      actualAdults: 0,
+      registeredChildren: 0,
+      actualChildren: 0,
+      noOfPresent: 0,
+      noOfAbsent:0
+    };
+
+    for (const r of rows) {
+      const regA = r.no_of_reg_adults ?? r.noOfRegAdults ?? r.registeredAdults ?? 0;
+      const actA = r.no_of_actual_adults ?? r.noOfActualAdults ?? r.actualAdults ?? 0;
+      const regC = r.no_of_reg_children ?? r.noOfRegChildren ?? r.registeredChildren ?? 0;
+      const actC = r.no_of_actual_children ?? r.noOfActualChildren ?? r.actualChildren ?? 0;
+      const pre = r.present ? 1:0;
+      const abs = !r.present ? 1:0;
+
+      acc.registeredAdults += Number(regA) || 0;
+      acc.actualAdults += Number(actA) || 0;
+      acc.registeredChildren += Number(regC) || 0;
+      acc.actualChildren += Number(actC) || 0;
+      acc.noOfPresent += Number(pre) || 0;
+      acc.noOfAbsent += Number(abs) || 0;
+    }
+
+    return acc;
+  }, [rows]);
+
+  // format data for recharts
+  const chartData = useMemo(
+    () => [
+      {
+        group: "Adults",
+        Registered: totals.registeredAdults,
+        Actual: totals.actualAdults,
+      },
+      {
+        group: "Children",
+        Registered: totals.registeredChildren,
+        Actual: totals.actualChildren,
+      },
+      {
+        group: "Registration",
+        Registered: totals.noOfPresent + totals.noOfAbsent,
+        Actual: totals.noOfPresent
+      }
+    ],
+    [totals]
+  );
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, background: "#f3f4f6" }}>
-      <form onSubmit={handleSubmit} style={{ width: "100%", maxWidth: 600, background: "#fff", padding: 20, borderRadius: 10, boxShadow: "0 6px 18px rgba(0,0,0,0.06)" }}>
-        <h2 style={{ marginTop: 0 }}>Attendee form</h2>
+    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Registered vs Actual</h3>
+        <div className="text-sm text-gray-500 dark:text-gray-300">Adults / Children</div>
+      </div>
 
-        <label style={{ display: "block", marginTop: 12 }}>
-          First Name
-          <input
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            required
-            style={{ width: "100%", padding: 8, marginTop: 6, borderRadius: 6, border: "1px solid #d1d5db" }}
-          />
-        </label>
+      {loading ? (
+        <div className="py-12 text-center text-gray-500">Loading attendees…</div>
+      ) : error ? (
+        <div className="py-6 text-center text-red-500">Error: {error}</div>
+      ) : (
+        <>
+          <div style={{ width: "100%", height }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="group" />
+                <YAxis allowDecimals={false} />
+                <Tooltip formatter={(value) => [value, "Count"]} />
+                <Legend />
+                <Bar dataKey="Registered" barSize={28} radius={[6, 6, 0, 0]} fill="#1976d2">
+                  <LabelList dataKey="Registered" position="top" />
+                </Bar>
+                <Bar dataKey="Actual" barSize={28} radius={[6, 6, 0, 0]}>
+                  <LabelList dataKey="Actual" position="top" />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
-        <label style={{ display: "block", marginTop: 12 }}>
-          Mobile number
-          <input
-            name="mobile"
-            type="tel"
-            value={form.mobile}
-            onChange={handleChange}
-            required
-            placeholder="9876543210"
-            style={{ width: "100%", padding: 8, marginTop: 6, borderRadius: 6, border: "1px solid #d1d5db" }}
-          />
-        </label>
-
-        <label style={{ display: "block", marginTop: 12 }}>
-          Email
-          <input
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            style={{ width: "100%", padding: 8, marginTop: 6, borderRadius: 6, border: "1px solid #d1d5db" }}
-          />
-        </label>
-
-        <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-          <label style={{ flex: 1 }}>
-            No. of Adults
-            <input
-              name="noOfAdults"
-              type="number"
-              min={0}
-              value={form.noOfAdults}
-              onChange={handleChange}
-              style={{ width: "100%", padding: 8, marginTop: 6, borderRadius: 6, border: "1px solid #d1d5db" }}
-            />
-          </label>
-
-          <label style={{ flex: 1 }}>
-            No. of Children
-            <input
-              name="noOfChildren"
-              type="number"
-              min={0}
-              value={form.noOfChildren}
-              onChange={handleChange}
-              style={{ width: "100%", padding: 8, marginTop: 6, borderRadius: 6, border: "1px solid #d1d5db" }}
-            />
-          </label>
-        </div>
-
-        <div style={{ display: "flex", gap: 16, alignItems: "center", marginTop: 12 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input name="preparing" type="checkbox" checked={form.preparing} onChange={handleChange} />
-            Bringing Bathukamma (preparing)
-          </label>
-
-          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input name="firstTime" type="checkbox" checked={form.firstTime} onChange={handleChange} />
-            First time attendee
-          </label>
-        </div>
-
-        {error && <div style={{ color: "#b91c1c", marginTop: 12 }}>{error}</div>}
-
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16, gap: 8 }}>
-          <button type="reset" onClick={() => setForm({ name: "", mobile: "", email: "", noOfAdults: 0, noOfChildren: 0, preparing: false, firstTime: false })} style={{ padding: "10px 14px", background: "#fff", border: "1px solid #d1d5db", borderRadius: 8 }}>
-            Reset
-          </button>
-          <button type="submit" disabled={submitting} style={{ padding: "10px 14px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8 }}>
-            {submitting ? "Submitting…" : "Submit"}
-          </button>
-        </div>
-      </form>
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+            Total — Registered: {totals.registeredAdults + totals.registeredChildren} • Actual:{" "}
+            {totals.actualAdults + totals.actualChildren}
+          </div>
+        </>
+      )}
     </div>
   );
 }
