@@ -1,7 +1,9 @@
-const BASE_URL = "https://lxwkrlfthexhhqlbdrme.supabase.co";
+const BASE_URL = "https://rbbnadgzoneslmzsovmb.supabase.co" 
+// "https://lxwkrlfthexhhqlbdrme.supabase.co"; //https://rbbnadgzoneslmzsovmb.supabase.co
 const ENDPOINT = `${BASE_URL}/rest/v1/attendees`;
-const ANON =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4d2tybGZ0aGV4aGhxbGJkcm1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc3NTU1ODgsImV4cCI6MjA3MzMzMTU4OH0.cPB4oTNEynQya9ht2HiA8qsahoEJkOoX7Bo3lcSTeCI";
+const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJiYm5hZGd6b25lc2xtenNvdm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyOTU5MzgsImV4cCI6MjA3Mzg3MTkzOH0.k1fOMJ3HcNFf37BS_lsTV3KCs29WLbropXYwRcznPts"
+
+//  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4d2tybGZ0aGV4aGhxbGJkcm1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc3NTU1ODgsImV4cCI6MjA3MzMzMTU4OH0.cPB4oTNEynQya9ht2HiA8qsahoEJkOoX7Bo3lcSTeCI";
 
 function buildHeaders(extra = {}) {
   return {
